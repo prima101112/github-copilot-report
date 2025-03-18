@@ -7,9 +7,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
-  storageClassName: alicloud-disk-essd
-
+      storage: 1Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,6 +26,8 @@ spec:
       containers:
       - name: github-copilot-report
         image: prima101112/github-copilot-report:latest
+        ports:
+        - containerPort: 8501
         resources:
           limits:
             cpu: "500m"
@@ -39,23 +39,17 @@ spec:
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
-              name: github-copilot-report-secrets
+              name: copilot-metrics-secret
               key: GITHUB_TOKEN
         - name: ORG_SLUG
-          valueFrom:
-            secretKeyRef:
-              name: github-copilot-report-secrets
-              key: ORG_SLUG
+          value: "your_organization_name"  # Replace with your GitHub organization name
         - name: DB_PATH
-          valueFrom:
-            secretKeyRef:
-              name: github-copilot-report-secrets
-              key: DB_PATH
+          value: "/app/data"  # Path to store database
         volumeMounts:
-        - name: sqlite-data
+        - name: data-volume
           mountPath: /app/data  # Adjust this path to match where your app stores the SQLite database
       volumes:
-      - name: sqlite-data
+      - name: data-volume
         persistentVolumeClaim:
           claimName: github-copilot-report-pvc
 ---
@@ -70,39 +64,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8501
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: github-copilot-report
-  annotations:
-    kubernetes.io/ingress.class: nginx-private
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-spec:
-  ingressClassName: nginx-private
-  rules:
-  - host: github-copilot-report-internal.mekari.io
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: github-copilot-report
-            port:
-              number: 80
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: github-copilot-report-secrets
-  annotations:
-    avp.kubernetes.io/path: "secret/data/production/ep/github-copilot-report"
-type: Opaque
-stringData:
-  GITHUB_TOKEN: <GITHUB_TOKEN>
-  ORG_SLUG: <ORG_SLUG>
-  DB_PATH: <DB_PATH>
+  type: ClusterIP
