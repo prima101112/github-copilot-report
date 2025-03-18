@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: github-copilot-report-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: alicloud-disk-essd
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-copilot-report
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-copilot-report
+  template:
+    metadata:
+      labels:
+        app: github-copilot-report
+    spec:
+      containers:
+      - name: github-copilot-report
+        image: prima101112/github-copilot-report:latest
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        env:
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-copilot-report-secrets
+              key: GITHUB_TOKEN
+        - name: ORG_SLUG
+          valueFrom:
+            secretKeyRef:
+              name: github-copilot-report-secrets
+              key: ORG_SLUG
+        - name: DB_PATH
+          valueFrom:
+            secretKeyRef:
+              name: github-copilot-report-secrets
+              key: DB_PATH
+        volumeMounts:
+        - name: sqlite-data
+          mountPath: /app/data  # Adjust this path to match where your app stores the SQLite database
+      volumes:
+      - name: sqlite-data
+        persistentVolumeClaim:
+          claimName: github-copilot-report-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: github-copilot-report
+spec:
+  selector:
+    app: github-copilot-report
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8501
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: github-copilot-report
+  annotations:
+    kubernetes.io/ingress.class: nginx-private
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: nginx-private
+  rules:
+  - host: github-copilot-report-internal.mekari.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: github-copilot-report
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-copilot-report-secrets
+  annotations:
+    avp.kubernetes.io/path: "secret/data/production/ep/github-copilot-report"
+type: Opaque
+stringData:
+  GITHUB_TOKEN: <GITHUB_TOKEN>
+  ORG_SLUG: <ORG_SLUG>
+  DB_PATH: <DB_PATH>

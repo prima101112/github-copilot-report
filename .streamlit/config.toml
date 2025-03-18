@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#4B6CFF"  # A vibrant blue
+backgroundColor = "#FFFFFF"  # Keep the background white for clarity
+secondaryBackgroundColor = "#E6E6FA"  # Lavender, for a subtle purple tint
+textColor = "#2C2E4A"  # A deep bluish-purple for text
+font = "sans serif"
