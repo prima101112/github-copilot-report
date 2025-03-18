@@ -271,8 +271,18 @@ def display_team_metrics(df, team_name, selected_date=None, selected_month=None)
 
     st.header(f"Metrics for {team_name}")
     
-    # Extract and display daily chat metrics at the top
+    # Add explanatory text for metrics in an expandable section
     st.subheader("Daily Usage Metrics")
+    
+    # Create expandable section for the metric explanations
+    with st.expander("ℹ️ How to read these metrics"):
+        st.markdown("""
+        - **Active Users**: Users who have opened GitHub or their IDE with Copilot enabled at least once
+        - **Engaged Users**: Users who have actively interacted with Copilot (received suggestions or engaged with chat)
+        - **IDE Chat Users**: Developers who have used the Copilot chat feature in their IDE
+        - **IDE Chats**: Total number of chat interactions initiated in IDEs
+        - **IDE Chats per User**: Average number of chat interactions per engaged user (higher is better)
+        """)
     
     # Calculate chat metrics for each day
     daily_chat_metrics = []
