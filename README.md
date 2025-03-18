@@ -2,7 +2,7 @@
 
 A Streamlit application that provides a visual dashboard for GitHub Copilot usage metrics across your organization and teams.
 
-![Dashboard Screenshot](https://via.placeholder.com/800x450?text=GitHub+Copilot+Metrics+Dashboard)
+![Dashboard Screenshot](github-copilot-report.png)
 
 ## 🌟 Overview
 
