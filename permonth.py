@@ -497,6 +497,46 @@ def main():
     else:
         selected_date = st.sidebar.selectbox("Select Date", dates)
 
+    # Add download CSV button
+    if st.sidebar.button("Download CSV"):
+        filtered_data = all_data.copy()
+        if selected_date:
+            filtered_data = filtered_data[filtered_data['date'] == selected_date]
+        elif selected_month:
+            filtered_data = filtered_data[filtered_data['month'] == selected_month]
+        
+        # Convert JSON strings to readable format
+        for col in ['copilot_ide_chat', 'copilot_dotcom_chat', 'copilot_dotcom_pull_requests', 'copilot_ide_code_completions']:
+            if col in filtered_data.columns:
+                filtered_data[col] = filtered_data[col].apply(lambda x: json.dumps(parse_json_string(x), indent=2) if x else '')
+        
+        # Add daily IDE Chat Users metrics
+        daily_chat_metrics = []
+        for _, row in filtered_data.iterrows():
+            metrics = extract_chat_metrics(row)
+            metrics['date'] = row['date']
+            daily_chat_metrics.append(metrics)
+        
+        chat_metrics_df = pd.DataFrame(daily_chat_metrics)
+        if not chat_metrics_df.empty:
+            # Merge the chat metrics with the filtered data
+            filtered_data = filtered_data.merge(
+                chat_metrics_df[['date', 'ide_chat_engaged_users']],
+                on='date',
+                how='left'
+            )
+            # Rename the column for clarity
+            filtered_data = filtered_data.rename(columns={'ide_chat_engaged_users': 'IDE_Chat_Users_Daily'})
+        
+        # Create CSV
+        csv = filtered_data.to_csv(index=False)
+        st.sidebar.download_button(
+            label="Click to Download",
+            data=csv,
+            file_name=f"copilot_metrics_{selected_team}_{selected_date or selected_month}.csv",
+            mime="text/csv"
+        )
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("[GitHub Copilot Metrics API Documentation](https://docs.github.com/en/rest/copilot/copilot-metrics?apiVersion=2022-11-28#get-copilot-metrics-for-a-team)")
     st.sidebar.info("Note: Teams with fewer than 5 members will not have team-specific metrics available.")
